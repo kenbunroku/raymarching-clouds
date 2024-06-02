@@ -33,7 +33,7 @@ const params = {
   fresnelPower: 8.0,
   saturation: 1.04,
   shininess: 30.0,
-  diffuseness: 0.2,
+  diffuseness: 0.5,
   light: [6.0, 5.0, -15.0],
 };
 
