@@ -15,6 +15,7 @@ import { plane } from "../utils/geometry";
 import vertShader from "../shaders/main.vert";
 import cloudFragShader from "../shaders/cloud.frag";
 import resultFragShader from "../shaders/result.frag";
+import fxaaFragShader from "../shaders/fxaa.frag";
 
 let gl, canvas;
 let quadVao;
@@ -72,6 +73,7 @@ let sceneStandBy = true;
 
 const clouds = {};
 const result = {};
+const fxaa = {};
 async function createScene() {
   const img = await loadImage("noise.png");
   clouds.texture = createTexture(gl, img);
@@ -122,7 +124,16 @@ async function createScene() {
       "shininess",
       "diffuseness",
       "light",
+      "time",
     ],
+    ["position", "uv"]
+  );
+
+  fxaa.program = createShader(
+    gl,
+    vertShader,
+    fxaaFragShader,
+    ["tex", "uPPPixelSize"],
     ["position", "uv"]
   );
 }
@@ -153,7 +164,7 @@ function renderScene() {
   unuseShader(gl, clouds.program);
 
   // 2. Render result
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, renderSpec.mainRT.frameBuffer);
   gl.viewport(0, 0, renderSpec.width, renderSpec.height);
   useShader(gl, result.program);
   gl.activeTexture(gl.TEXTURE0);
@@ -179,8 +190,24 @@ function renderScene() {
   gl.uniform1f(result.program.uniforms.shininess, params.shininess);
   gl.uniform1f(result.program.uniforms.diffuseness, params.diffuseness);
   gl.uniform3fv(result.program.uniforms.light, params.light);
+  gl.uniform1f(result.program.uniforms.time, timeInfo.elapsed);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   unuseShader(gl, result.program);
+
+  // 3. Render FXAA
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, renderSpec.width, renderSpec.height);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  useShader(gl, fxaa.program);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, renderSpec.mainRT.texture);
+  gl.uniform1i(fxaa.program.uniforms.tex, 0);
+  gl.uniform2fv(fxaa.program.uniforms.uPPPixelSize, [
+    1.0 / renderSpec.width,
+    1.0 / renderSpec.height,
+  ]);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  unuseShader(gl, fxaa.program);
 
   gl.bindVertexArray(null);
   stats.end();
@@ -213,6 +240,7 @@ function setViewports() {
     renderSpec[rtname] = createRenderTarget(gl, rtw, rth);
   };
   rtfunc("mainRT", renderSpec.width, renderSpec.height);
+  rtfunc("wFullRT", renderSpec.width, renderSpec.height);
   rtfunc("wHalfRT", renderSpec.halfWidth, renderSpec.halfHeight);
 }
 
