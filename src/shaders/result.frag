@@ -18,19 +18,68 @@ uniform float saturation;
 uniform float shininess;
 uniform float diffuseness;
 uniform vec3 light;
+uniform float time;
 
 out vec4 fragColor;
 
 #define MAX_STEPS 50
 #define MAX_DIST 100.0
 #define SURFACE_DIST 0.001
+#define PI 3.1415926
+#define TAU 6.2831853
+
+#include './modules/snoise.glsl'
+
+vec3 opTwist(in vec3 p, float k) {
+  float c = cos(k * p.y);
+  float s = sin(k * p.y);
+  mat2 m = mat2(c, -s, s, c);
+  vec3 q = vec3(m * p.xz, p.y);
+  return q;
+}
+
+// This function comes from glsl-rotate https://github.com/dmnsgn/glsl-rotate/blob/main/rotation-3d.glsl
+mat4 rotation3d(vec3 axis, float angle) {
+  axis = normalize(axis);
+  float s = sin(angle);
+  float c = cos(angle);
+  float oc = 1.0f - c;
+
+  return mat4(oc * axis.x * axis.x + c, oc * axis.x * axis.y - axis.z * s, oc * axis.z * axis.x + axis.y * s, 0.0f, oc * axis.x * axis.y + axis.z * s, oc * axis.y * axis.y + c, oc * axis.y * axis.z - axis.x * s, 0.0f, oc * axis.z * axis.x - axis.y * s, oc * axis.y * axis.z + axis.x * s, oc * axis.z * axis.z + c, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+vec3 rotate(vec3 v, vec3 axis, float angle) {
+  mat4 m = rotation3d(axis, angle);
+  return (m * vec4(v, 1.0f)).xyz;
+}
 
 float sdSphere(vec3 p, float s) {
   return length(p) - s;
 }
 
+float sdSine(vec3 p) {
+  return 1.0f - (sin(p.x) + sin(p.y) + sin(p.z)) / 3.0f;
+}
+
+float smin(float a, float b, float k) {
+  float h = clamp(0.5f + 0.5f * (b - a) / k, 0.0f, 1.0f);
+  return mix(b, a, h) - k * h * (1.0f - h);
+}
+
+float displacement(vec4 p) {
+  return snoise(p * 2.0f);
+}
+
 float scene(vec3 p) {
-  float distance = sdSphere(p, 1.f);
+  vec3 p1 = rotate(p, vec3(1.0f), time * 0.4f);
+  p1 = opTwist(p1, cos(time * 0.7f));
+  float sphere = sdSphere(p1, 1.5f);
+
+  float scale = 8.0f + 6.0f * sin(time * 0.5f) + displacement(vec4(p, time * 0.5f));
+  float sine = (0.8f - sdSine(p1 * scale)) / (scale * 2.0f);
+
+  float distance = max(sphere, sine);
+
   return distance;
 }
 
@@ -78,7 +127,7 @@ float specular(vec3 light, float shininess, float diffuseness, vec3 normal, vec3
   float kDiffuse = max(0.0f, NdotL);
   float NdotH2 = NdotH * NdotH;
 
-  float kSpecular = pow(NdotH2, 1000.0f / shininess);
+  float kSpecular = pow(NdotH2, 2000.0f / shininess);
   return kDiffuse * diffuseness + kSpecular;
 }
 
