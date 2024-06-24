@@ -77,7 +77,7 @@ const fxaa = {};
 async function createScene() {
   const img = await loadImage("noise.png");
   clouds.texture = createTexture(gl, img);
-  const blueNoise = await loadImage("bluenoise.png");
+  const blueNoise = await loadImage("bluenoise.png"); // https://github.com/Calinou/free-blue-noise-textures?tab=readme-ov-file
   clouds.blueNoise = createTexture(gl, blueNoise);
 
   const geometry = plane(2.0, 2.0, [1.0, 0.0, 0.0, 1.0]);

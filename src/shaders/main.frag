@@ -9,8 +9,6 @@ in vec2 vUv;
 
 out vec4 fragColor;
 
-#include './modules/snoise.glsl'
-
 float rand(vec3 p) {
   return fract(sin(dot(p, vec3(12.345f, 67.89f, 412.12f))) * 42123.45f) * 2.0f - 1.0f;
 }
