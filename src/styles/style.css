@@ -9,3 +9,13 @@ canvas {
   padding: 0;
   margin: 0;
 }
+
+img {
+  position: absolute;
+  display: block;
+  width: 2.5em;
+  height: auto;
+  bottom: 0;
+  left: 0;
+  margin: 1em;
+}
